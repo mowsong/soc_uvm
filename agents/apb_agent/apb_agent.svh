@@ -26,8 +26,6 @@ class apb_agent extends uvm_component;
 //
 `uvm_component_utils(apb_agent)
 
-string report_id = "apb_agent";
-
 //------------------------------------------
 // Data Members
 //------------------------------------------
@@ -58,16 +56,15 @@ endfunction
 
 function void apb_agent::build_phase(uvm_phase phase);
   if(!uvm_config_db #(apb_agent_config)::get(this, "", "apb_agent_config", m_cfg)) begin
-    `uvm_error(report_id, "APB agent config not found")
+    `uvm_error("build_phase", "APB agent config not found")
   end
   
-  `uvm_info(report_id, m_cfg.convert2string(), UVM_LOW)
+  `uvm_info("build_phase", m_cfg.convert2string(), UVM_LOW)
 
   // Monitor is always present
   m_monitor = apb_monitor::type_id::create("m_monitor", this);
   // Only build the driver and sequencer if active
   if(m_cfg.active == UVM_ACTIVE) begin
-    `uvm_info(report_id, "creating driver and sequencer", UVM_MEDIUM)
     m_driver = apb_driver::type_id::create("m_driver", this);
     m_sequencer = apb_sequencer::type_id::create("m_sequencer", this);
   end
@@ -90,4 +87,4 @@ function void apb_agent::connect_phase(uvm_phase phase);
     m_monitor.ap.connect(m_fcov_monitor.analysis_export);
   end
 
-endfunction: connect_phase
+endfunction: connect_phase 

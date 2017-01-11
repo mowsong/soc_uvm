@@ -56,6 +56,7 @@ function void ahb_agent::build_phase(uvm_phase phase);
     m_fcov_monitor = ahb_coverage_monitor::type_id::create("m_fcov_monitor", this);
   end
   ap = new("ap", this);
+  `uvm_info("build_phase", "done", UVM_MEDIUM)
 endfunction : build_phase
 
 

@@ -64,6 +64,7 @@ task apb_driver::run_phase(uvm_phase phase);
   APB.PSLVERR <= 0;
   // Wait for reset to clear
   @(posedge APB.PRESETn);
+  @(posedge APB.PCLK);
 
   forever begin
     seq_item_port.get_next_item(req);

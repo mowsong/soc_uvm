@@ -68,7 +68,7 @@ task apb_monitor::run_phase(uvm_phase phase);
   forever begin
     // Detect the protocol event on the TBAI virtual interface
     @(posedge APB.PCLK);
-    if(APB.PREADY && APB.PSEL[apb_index])
+    if(APB.PREADY && APB.PSEL[apb_index] && APB.PENABLE)
     // Assign the relevant values to the analysis item fields
       begin
         item.addr = APB.PADDR;
@@ -84,6 +84,7 @@ task apb_monitor::run_phase(uvm_phase phase);
         // Clone and publish the cloned item to the subscribers
         $cast(cloned_item, item.clone());
         ap.write(cloned_item);
+        `uvm_info(get_name(), "Get one APB transaction", UVM_MEDIUM)
       end
   end
 endtask: run_phase

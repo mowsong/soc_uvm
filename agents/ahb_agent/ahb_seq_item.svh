@@ -14,16 +14,15 @@ class ahb_seq_item extends uvm_sequence_item;
 rand logic[31:0] addr;
 rand logic[31:0] data;
 rand logic we;
-rand int delay;
+rand ahb_trans_e trans;
+rand ahb_resp_e resp;
 
-bit error;
+rand int delay;
+bit error = 0;
 
 //------------------------------------------
 // Constraints
 //------------------------------------------
-constraint addr_alignment {
-  addr[1:0] == 0;
-}
 
 constraint delay_bounds {
   delay inside {[1:20]};
@@ -58,6 +57,8 @@ function void ahb_seq_item::do_copy(uvm_object rhs);
   addr = rhs_.addr;
   data = rhs_.data;
   we = rhs_.we;
+  trans = rhs_.trans;
+  resp = rhs_.resp;
   delay = rhs_.delay;
 
 endfunction:do_copy
@@ -70,9 +71,11 @@ function bit ahb_seq_item::do_compare(uvm_object rhs, uvm_comparer comparer);
     return 0;
   end
   return super.do_compare(rhs, comparer) &&
-         addr == rhs_.addr &&
-         data == rhs_.data &&
-         we   == rhs_.data;
+         addr  == rhs_.addr &&
+         data  == rhs_.data &&
+         we    == rhs_.data &&
+         trans == rhs_.trans &&
+         resp  == rhs_.resp;
   // Delay is not relevant to the comparison
 endfunction:do_compare
 
@@ -81,7 +84,7 @@ function string ahb_seq_item::convert2string();
 
   $sformat(s, "%s\n", super.convert2string());
   // Convert to string function reusing s:
-  $sformat(s, "%s\n addr\t%0h\n data\t%0h\n we\t%0b\n delay\t%0d\n", s, addr, data, we, delay);
+  $sformat(s, "%s\n addr\t%0h\n data\t%0h\n we\t%0b\n trans\t%0h\n resp\t%0h\n delay\t%0d\n", s, addr, data, we, trans, resp, delay);
   return s;
 
 endfunction:convert2string
@@ -102,5 +105,7 @@ function void ahb_seq_item:: do_record(uvm_recorder recorder);
   `uvm_record_field("addr", addr)
   `uvm_record_field("data", data)
   `uvm_record_field("we", we)
+  `uvm_record_field("trans", trans)
+  `uvm_record_field("resp", resp)
   `uvm_record_field("delay", delay)
 endfunction:do_record
