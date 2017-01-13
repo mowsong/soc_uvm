@@ -56,55 +56,55 @@ endtask: run_phase
 task automatic ahb_driver::do_pipelined_transfer(input int id);
   ahb_seq_item req;
   ahb_seq_item rsp;
+  int delay;
 
   forever begin
-    
+
+    // lock address phase bus access
     pipeline_lock.get();
   
-    seq_item_port.try_next_item(req);  
-    
-    if (req != null) begin
-      
-      seq_item_port.item_done();  // unblock sequence's finsih_item()
-      
-      `uvm_info(this.get_name(), $sformatf("Address phase starts (%0d)",id), UVM_MEDIUM)
-      AHB.HADDR = req.addr;
-      AHB.HTRANS = req.trans;
-      AHB.HWRITE = req.we;
+    // retrieve sequence item from seqeunce (via sequencer)
+    seq_item_port.get(req);  
 
-      @(posedge AHB.HCLK);
-    
-      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
-       
-      pipeline_lock.put();
-   
-      `uvm_info(this.get_name(), $sformatf("Data phase starts (%0d)", id), UVM_MEDIUM)
-      AHB.HWDATA = req.data;
-    
-      @(posedge AHB.HCLK);
-      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+    // delay the bus cycle
+    delay = req.delay;
+    `uvm_info(this.get_name(), $sformatf("Delay for %0d cycle", delay), UVM_MEDIUM)
+    repeat (delay) @(posedge AHB.HCLK);
 
-      $cast(rsp, req.clone());
-      rsp.set_id_info(req);
-      seq_item_port.put_response(rsp);
+    `uvm_info(this.get_name(), $sformatf("Address phase starts (%0d)",id), UVM_MEDIUM)
+    AHB.HADDR = req.addr;
+    AHB.HTRANS = req.trans;
+    AHB.HWRITE = req.we;
 
-    end 
-    else begin
-      `uvm_info(this.get_name(), $sformatf("IDLE (%0d)", id), UVM_MEDIUM)
-      AHB.HADDR = 32'h0;
-      AHB.HTRANS = IDLE;
-      AHB.HWRITE = 1'b1;
+    @(posedge AHB.HCLK);
+    while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+
+    // stop driving the address phase signals before releasing the bus
+    AHB.HADDR = 32'h0;
+    AHB.HTRANS = IDLE;
+    AHB.HWRITE = 1'b1;
+
+    // release address phase bus access
+    pipeline_lock.put();
+ 
+    `uvm_info(this.get_name(), $sformatf("Data phase starts (%0d)", id), UVM_MEDIUM)
+    AHB.HWDATA = req.data;
+  
+    @(posedge AHB.HCLK);
+    while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
     
-      @(posedge AHB.HCLK);
-      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
-      pipeline_lock.put();
-      AHB.HWDATA = 32'h0;
-      @(posedge AHB.HCLK);
-      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
-    end
+    // stop driving the data phase signals before releasing the bus
+    AHB.HWDATA = 32'h0;
+
+    // sent response item to sequence (via sequencer)
+    $cast(rsp, req.clone());
+    rsp.set_id_info(req);
+    seq_item_port.put(rsp);
+  
   end
 
 endtask: do_pipelined_transfer
+
 
 function void ahb_driver::build_phase(uvm_phase phase);
   if(!uvm_config_db #(ahb_agent_config)::get(this, "", "ahb_agent_config", m_cfg)) begin
@@ -112,7 +112,7 @@ function void ahb_driver::build_phase(uvm_phase phase);
   end
 endfunction: build_phase
 
-// Looks up the address and returns PSEL line that should be activated
+// Looks up the address and returns HSEL line that should be activated
 // If the address is invalid, a non positive integer is returned to indicate an error
 function int ahb_driver::sel_lookup(logic[31:0] address);
   for(int i = 0; i < m_cfg.no_select_lines; i++) begin

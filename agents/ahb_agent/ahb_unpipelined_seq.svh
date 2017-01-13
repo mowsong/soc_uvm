@@ -42,9 +42,19 @@ task ahb_unpipelined_seq::body;
     if(!req.randomize()) begin
       `uvm_error("body", "req randomization failure")
     end
+    //req.trans = NONSEQ;
+    finish_item(req);
+    req = ahb_seq_item::type_id::create("req");
+    start_item(req);
+    if(!req.randomize()) begin
+      `uvm_error("body", "req randomization failure")
+    end
     req.trans = NONSEQ;
+    req.delay = 0;
     finish_item(req);
     
+    get_response(rsp);
+    `uvm_info("body", rsp.convert2string(), UVM_MEDIUM)
     get_response(rsp);
     `uvm_info("body", rsp.convert2string(), UVM_MEDIUM)
   end
