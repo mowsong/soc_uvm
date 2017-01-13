@@ -30,7 +30,6 @@ endclass:ahb_unpipelined_seq
 
 function ahb_unpipelined_seq::new(string name = "ahb_unpipelined_seq");
   super.new(name);
-  `uvm_info("new", "done", UVM_MEDIUM)
 endfunction
 
 task ahb_unpipelined_seq::body;
@@ -43,22 +42,11 @@ task ahb_unpipelined_seq::body;
     if(!req.randomize()) begin
       `uvm_error("body", "req randomization failure")
     end
+    req.trans = NONSEQ;
     finish_item(req);
     
-    if (req.trans != IDLE) begin
-      req = ahb_seq_item::type_id::create("req");
-      start_item(req);
-      if(!req.randomize()) begin
-        `uvm_error("body", "req randomization failure")
-      end
-      req.trans = IDLE;
-      req.addr = 32'h0;
-      req.data = 32'h0;
-
-      finish_item(req);
-    
-      get_response(rsp);
-    end
+    get_response(rsp);
+    `uvm_info("body", rsp.convert2string(), UVM_MEDIUM)
   end
 
 endtask:body

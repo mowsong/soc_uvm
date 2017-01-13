@@ -60,32 +60,47 @@ task automatic ahb_driver::do_pipelined_transfer(input int id);
   forever begin
     
     pipeline_lock.get();
-    
-    seq_item_port.get(req);
-    `uvm_info(this.get_name(), $sformatf("Address phase starts (%0d)",id), UVM_MEDIUM)
-    AHB.HADDR = req.addr;
-    AHB.HTRANS = req.trans;
-    AHB.HWRITE = req.we;
-
-    @(posedge AHB.HCLK);
-    
-    while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
   
-    pipeline_lock.put();
-   
-    `uvm_info(this.get_name(), $sformatf("Data phase starts (%0d)", id), UVM_MEDIUM)
-    AHB.HWDATA = req.data;
+    seq_item_port.try_next_item(req);  
     
-    @(posedge AHB.HCLK);
-    while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+    if (req != null) begin
+      
+      seq_item_port.item_done();  // unblock sequence's finsih_item()
+      
+      `uvm_info(this.get_name(), $sformatf("Address phase starts (%0d)",id), UVM_MEDIUM)
+      AHB.HADDR = req.addr;
+      AHB.HTRANS = req.trans;
+      AHB.HWRITE = req.we;
 
-    if (req.trans != IDLE) begin
+      @(posedge AHB.HCLK);
+    
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+       
+      pipeline_lock.put();
+   
+      `uvm_info(this.get_name(), $sformatf("Data phase starts (%0d)", id), UVM_MEDIUM)
+      AHB.HWDATA = req.data;
+    
+      @(posedge AHB.HCLK);
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+
       $cast(rsp, req.clone());
       rsp.set_id_info(req);
-      seq_item_port.put(rsp);
-    end
+      seq_item_port.put_response(rsp);
+
+    end 
     else begin
-      `uvm_info(this.get_name(), "IDLE", UVM_LOW)
+      `uvm_info(this.get_name(), $sformatf("IDLE (%0d)", id), UVM_MEDIUM)
+      AHB.HADDR = 32'h0;
+      AHB.HTRANS = IDLE;
+      AHB.HWRITE = 1'b1;
+    
+      @(posedge AHB.HCLK);
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+      pipeline_lock.put();
+      AHB.HWDATA = 32'h0;
+      @(posedge AHB.HCLK);
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
     end
   end
 
