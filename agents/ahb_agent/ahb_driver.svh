@@ -16,7 +16,7 @@ virtual ahb_if AHB;
 //------------------------------------------
 ahb_agent_config m_cfg;
 
-semaphore pipeline_lock = new(1);
+semaphore address_phase_lock = new(1);
 
 //------------------------------------------
 // Methods
@@ -27,7 +27,8 @@ extern function new(string name = "ahb_driver", uvm_component parent = null);
 extern task run_phase(uvm_phase phase);
 extern function void build_phase(uvm_phase phase);
 
-extern task do_pipelined_transfer(input int id);
+extern task do_pipelined_transfer_get(input int id);
+extern task do_pipelined_transfer_try(input int id);
 
 endclass: ahb_driver
 
@@ -47,21 +48,28 @@ task ahb_driver::run_phase(uvm_phase phase);
   @(posedge AHB.HCLK);
 
   fork
-    do_pipelined_transfer(0);
-    do_pipelined_transfer(1);
+
+    //do_pipelined_transfer_get(0);
+    //do_pipelined_transfer_get(1);
+    
+    do_pipelined_transfer_try(0);
+    do_pipelined_transfer_try(1);
+
   join
   
 endtask: run_phase
 
-task automatic ahb_driver::do_pipelined_transfer(input int id);
+task automatic ahb_driver::do_pipelined_transfer_get(input int id);
   ahb_seq_item req;
   ahb_seq_item rsp;
   int delay;
 
+  `uvm_info(this.get_name(), "using do_pipelined_transfer_get()", UVM_HIGH)
+
   forever begin
 
     // lock address phase bus access
-    pipeline_lock.get();
+    address_phase_lock.get();
   
     // retrieve sequence item from seqeunce (via sequencer)
     seq_item_port.get(req);  
@@ -85,7 +93,7 @@ task automatic ahb_driver::do_pipelined_transfer(input int id);
     AHB.HWRITE = 1'b1;
 
     // release address phase bus access
-    pipeline_lock.put();
+    address_phase_lock.put();
  
     `uvm_info(this.get_name(), $sformatf("Data phase starts (%0d)", id), UVM_MEDIUM)
     AHB.HWDATA = req.data;
@@ -103,7 +111,78 @@ task automatic ahb_driver::do_pipelined_transfer(input int id);
   
   end
 
-endtask: do_pipelined_transfer
+endtask: do_pipelined_transfer_get
+
+task automatic ahb_driver::do_pipelined_transfer_try(input int id);
+  ahb_seq_item req;
+  ahb_seq_item rsp;
+  int delay;
+  
+  `uvm_info(this.get_name(), "using do_pipelined_transfer_try()", UVM_HIGH)
+
+  forever begin
+
+    // lock address phase bus access
+    address_phase_lock.get();
+  
+    // retrieve sequence item from seqeunce (via sequencer)
+    seq_item_port.try_next_item(req);  
+  
+    if (req != null) begin
+
+      seq_item_port.item_done(); // unblock sequence's finsih_item()
+
+      // delay the bus cycle
+      delay = req.delay;
+      `uvm_info(this.get_name(), $sformatf("Delay for %0d cycle", delay), UVM_MEDIUM)
+      repeat (delay) @(posedge AHB.HCLK);
+
+      `uvm_info(this.get_name(), $sformatf("Address phase starts (%0d)",id), UVM_MEDIUM)
+      AHB.HADDR = req.addr;
+      AHB.HTRANS = req.trans;
+      AHB.HWRITE = req.we;
+
+      @(posedge AHB.HCLK);
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+
+      // release address phase bus access
+      address_phase_lock.put();
+   
+      `uvm_info(this.get_name(), $sformatf("Data phase starts (%0d)", id), UVM_MEDIUM)
+      AHB.HWDATA = req.data;
+    
+      @(posedge AHB.HCLK);
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+      
+      // sent response item to sequence (via sequencer)
+      $cast(rsp, req.clone());
+      rsp.set_id_info(req);
+      seq_item_port.put(rsp);
+  
+    end
+    else begin
+      // drive IDLE state signals in address phase
+      AHB.HADDR = 32'h0;
+      AHB.HTRANS = IDLE;
+      AHB.HWRITE = 1'b1;
+
+      @(posedge AHB.HCLK);
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+
+      address_phase_lock.put();
+
+      // drive IDLE state signals in data phase
+      AHB.HWDATA = 32'h0;
+
+      @(posedge AHB.HCLK);
+      while (!AHB.HREADY == 1) @(posedge AHB.HCLK);
+
+      // no response for IDLE cycle
+    end
+
+  end
+
+endtask: do_pipelined_transfer_try
 
 
 function void ahb_driver::build_phase(uvm_phase phase);

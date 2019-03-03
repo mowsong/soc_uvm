@@ -1,0 +1,10 @@
++incdir+${UVM_HOME}/src
+${UVM_HOME}/src/uvm.sv 
+${UVM_HOME}/src/dpi/uvm_dpi.cc 
+${AHB_AGENT}/ahb_if.sv
++incdir+${AHB_AGENT} 
+${AHB_AGENT}/ahb_agent_pkg.sv 
++incdir+../env/ 
++incdir+../tests
+../dut/dut.sv 
+../tb/tb_top.sv

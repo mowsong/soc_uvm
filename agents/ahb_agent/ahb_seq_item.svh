@@ -25,7 +25,7 @@ bit error = 0;
 //------------------------------------------
 
 constraint delay_bounds {
-  delay inside {[1:20]};
+  delay inside {[0:20]};
 }
 
 //------------------------------------------
@@ -84,7 +84,7 @@ function string ahb_seq_item::convert2string();
 
   $sformat(s, "%s\n", super.convert2string());
   // Convert to string function reusing s:
-  $sformat(s, "%s\n addr\t%0h\n data\t%0h\n we\t%0b\n trans\t%0h\n resp\t%0h\n delay\t%0d\n", s, addr, data, we, trans, resp, delay);
+  $sformat(s, "%s\n addr\t%32h\n data\t%32h\n we\t%0b\n trans\t%h\n resp\t%0b\n delay\t%0d\n", s, addr, data, we, trans, resp, delay);
   return s;
 
 endfunction:convert2string

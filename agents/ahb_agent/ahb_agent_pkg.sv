@@ -16,6 +16,7 @@ typedef uvm_sequencer #(ahb_seq_item) ahb_sequencer;
 `include "ahb_agent.svh"
 
 // Utility Sequences
+`include "ahb_pipelined_seq.svh"
 `include "ahb_unpipelined_seq.svh"
 
 endpackage: ahb_agent_pkg
