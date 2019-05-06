@@ -49,11 +49,11 @@ task ahb_driver::run_phase(uvm_phase phase);
 
   fork
 
-    //do_pipelined_transfer_get(0);
-    //do_pipelined_transfer_get(1);
+    do_pipelined_transfer_get(0);
+    do_pipelined_transfer_get(1);
     
-    do_pipelined_transfer_try(0);
-    do_pipelined_transfer_try(1);
+    //do_pipelined_transfer_try(0);
+    //do_pipelined_transfer_try(1);
 
   join
   

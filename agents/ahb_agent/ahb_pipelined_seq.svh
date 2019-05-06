@@ -11,41 +11,51 @@ class ahb_pipelined_seq extends uvm_sequence #(ahb_seq_item);
 //------------------------------------------
 // Data Members (Outputs rand, inputs non-rand)
 //------------------------------------------
+int count;
 
 //------------------------------------------
-// Constraints 
+// Constraints
 //------------------------------------------
 
 
+
 //------------------------------------------
-// Methods 
+// Methods
 //------------------------------------------
 
+// Standard UVM Methods:
 extern function new(string name = "ahb_pipelined_seq");
 extern task body;
+extern function void response_handler(uvm_sequence_item response);
 
-endclass: ahb_pipelined_seq
+endclass:ahb_pipelined_seq
 
 function ahb_pipelined_seq::new(string name = "ahb_pipelined_seq");
-  super.new();
+  super.new(name);
 endfunction
 
 task ahb_pipelined_seq::body;
   ahb_seq_item req;
   ahb_seq_item rsp;
+  count = 0;
+  use_response_handler(1);
 
-  begin
-    req = ahb_seq_item::type_id::create("req");
+  req = ahb_seq_item::type_id::create("req");
+  for (int i=0; i<10; i++) begin
     start_item(req);
-    if(!req.randomize() with {delay == 0;}) begin
+    if(!req.randomize() with {addr == i; data == i; delay == 0;}) begin
       `uvm_error("body", "req randomization failure")
     end
     finish_item(req);
-    
-    get_response(req);
-    `uvm_info("body", rsp.convert2string(), UVM_MEDIUM)
   end
+  
+  wait(count == 10);
+  `uvm_info("body", "Complete", UVM_MEDIUM)
 
-endtask: body
+endtask:body
 
+function void ahb_pipelined_seq::response_handler(uvm_sequence_item response);
+    count++;
+    `uvm_info("response handler", response.convert2string(), UVM_MEDIUM)
+endfunction
 

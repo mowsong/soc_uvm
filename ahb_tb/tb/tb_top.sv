@@ -16,6 +16,7 @@ import ahb_agent_pkg::*;
 
 `include "ahb_base_test.svh"
 `include "ahb_unpipelined_write_test.svh"
+`include "ahb_pipelined_write_test.svh"
 
 ahb_if AHB(.HCLK(HCLK), .HRESETn(HRESETn));
 
